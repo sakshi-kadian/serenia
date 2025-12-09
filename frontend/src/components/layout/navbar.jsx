@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "../ui/button";
-import { Sparkles, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { ModalComingSoon } from "./ModalComingSoon";
 
 export function Navbar() {
@@ -12,7 +12,6 @@ export function Navbar() {
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="h-6 w-6 text-[#F59E0B]" />
                             <span className="text-xl font-bold bg-gradient-to-r from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">
                                 Serenia
                             </span>

@@ -62,11 +62,6 @@ export function Footer() {
                     <p className="text-sm text-[#94a3b8]">
                         &copy; 2025 Serenia AI Inc. All rights reserved.
                     </p>
-                    <div className="flex items-center gap-2 text-sm text-[#94a3b8]">
-                        <span>Crafted with</span>
-                        <Heart size={14} className="text-[#E11D48] fill-[#E11D48]" />
-                        <span>in San Francisco</span>
-                    </div>
                 </div>
             </div>
         </footer>

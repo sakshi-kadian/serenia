@@ -1,9 +1,7 @@
-
 import React from "react";
 import { Button } from "../ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
-
+import { ArrowRight } from "lucide-react";
 
 export function Hero() {
     return (
@@ -21,17 +19,24 @@ export function Hero() {
                     transition={{ duration: 0.8, ease: "easeOut" }}
                 >
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card mb-8 border-[#F59E0B]/20">
-                        <Sparkles className="w-4 h-4 text-[#F59E0B]" />
                         <span className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#D97706] to-[#F59E0B]">
                             Redefining Human-AI Connection
                         </span>
                     </div>
 
-                    <h1 className="text-6xl md:text-8xl font-bold tracking-tight text-[#451A03] mb-8 font-serif leading-tight">
-                        <span className="text-gradient-yellow">Serenia</span>: Your <br />
-                        <span className="text-gradient-yellow">
-                            Emotion Aware Chatbot
+                    {/* FIXED TITLE SECTION */}
+                    <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-8 font-serif leading-tight text-[#D4A637]">
+
+                        {/* Gradient ONLY on Serenia */}
+                        <div className="text-7xl md:text-9xl text-gradient-yellow mb-2">
+                            Serenia
+                        </div>
+
+                        {/* Tagline WITHOUT gradient — solid golden */}
+                        <span className="text-[#E6A15C]">
+                            Your Emotion Aware Chatbot
                         </span>
+
                     </h1>
 
                     <p className="max-w-2xl mx-auto text-xl md:text-2xl text-[#475569] mb-12 leading-relaxed">
@@ -47,18 +52,6 @@ export function Hero() {
                         </Button>
                     </div>
                 </motion.div>
-            </div>
-
-            {/* Floating Elements for "Wow" Factor */}
-            <div className="absolute top-1/3 left-10 md:left-20 animate-float opacity-40 md:opacity-100 hidden sm:block">
-                <div className="glass-card p-4 rounded-2xl rotate-[-6deg]">
-                    <span className="text-4xl">💭</span>
-                </div>
-            </div>
-            <div className="absolute bottom-1/4 right-10 md:right-20 animate-float delay-1000 opacity-40 md:opacity-100 hidden sm:block">
-                <div className="glass-card p-4 rounded-2xl rotate-[6deg]">
-                    <span className="text-4xl">❤️</span>
-                </div>
             </div>
         </section>
     );

@@ -4,7 +4,7 @@ import { Heart, Brain, Zap } from "lucide-react";
 
 export function About() {
     return (
-        <section className="py-24 relative overflow-hidden bg-white/50">
+        <section className="py-24 relative overflow-hidden">
             {/* Subtle Texture */}
             <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(#E11D48 1px, transparent 1px)", backgroundSize: "32px 32px" }}></div>
 

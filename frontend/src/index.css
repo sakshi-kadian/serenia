@@ -29,26 +29,9 @@
   html {
     scroll-behavior: smooth;
   }
-
-  body {
-    @apply bg-[#FFF5EB] text-[#451A03] antialiased selection:bg-[#F59E0B]/20 selection:text-[#B45309];
-    font-feature-settings: "rlig" 1, "calt" 1;
-    background-image:
-      radial-gradient(at 0% 0%, hsla(30, 100%, 90%, 0.5) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(45, 100%, 90%, 0.5) 0px, transparent 50%);
-    background-attachment: fixed;
-  }
 }
 
 @layer utilities {
-  .text-gradient-gold {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#D97706] via-[#F59E0B] to-[#D97706] bg-[200%_auto] animate-gradient;
-  }
-
-  .text-gradient-yellow {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#F59E0B] via-[#FCD34D] to-[#F59E0B] bg-[200%_auto] animate-gradient;
-  }
-
   .glass-card {
     @apply bg-white/40 backdrop-blur-xl border border-white/50 shadow-xl;
   }
