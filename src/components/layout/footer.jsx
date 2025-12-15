@@ -1,5 +1,5 @@
 import React from "react";
-import { Twitter, Github, Linkedin, Heart } from "lucide-react";
+import { Twitter, Github, Linkedin } from "lucide-react";
 
 export function Footer() {
     console.log("Footer Rendered");
@@ -16,13 +16,13 @@ export function Footer() {
                             The first emotion-aware cognitive interface. Designed to extend human intelligence through empathy and understanding.
                         </p>
                         <div className="flex gap-4">
-                            <a href="#" className="p-2 rounded-full bg-[#FFF1F2] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors">
+                            <a href="/" className="p-2 rounded-full bg-[#FFF1F2] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors">
                                 <Twitter size={18} />
                             </a>
-                            <a href="#" className="p-2 rounded-full bg-[#FFF1F2] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors">
+                            <a href="/" className="p-2 rounded-full bg-[#FFF1F2] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors">
                                 <Github size={18} />
                             </a>
-                            <a href="#" className="p-2 rounded-full bg-[#FFF1F2] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors">
+                            <a href="/" className="p-2 rounded-full bg-[#FFF1F2] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors">
                                 <Linkedin size={18} />
                             </a>
                         </div>
@@ -31,29 +31,29 @@ export function Footer() {
                     <div>
                         <h4 className="font-bold text-[#1C1917] mb-6">Product</h4>
                         <ul className="space-y-4 text-sm text-[#475569]">
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Features</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Integrations</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Pricing</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Changelog</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Features</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Integrations</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Pricing</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Changelog</a></li>
                         </ul>
                     </div>
 
                     <div>
                         <h4 className="font-bold text-[#1C1917] mb-6">Company</h4>
                         <ul className="space-y-4 text-sm text-[#475569]">
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">About Us</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Careers</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Blog</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Contact</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">About Us</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Careers</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Blog</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Contact</a></li>
                         </ul>
                     </div>
 
                     <div>
                         <h4 className="font-bold text-[#1C1917] mb-6">Legal</h4>
                         <ul className="space-y-4 text-sm text-[#475569]">
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Privacy Policy</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Terms of Service</a></li>
-                            <li><a href="#" className="hover:text-[#E11D48] transition-colors">Cookie Policy</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Privacy Policy</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Terms of Service</a></li>
+                            <li><a href="/" className="hover:text-[#E11D48] transition-colors">Cookie Policy</a></li>
                         </ul>
                     </div>
                 </div>
