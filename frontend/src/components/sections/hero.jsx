@@ -6,7 +6,11 @@ import { ArrowRight } from "lucide-react";
 export function Hero() {
     return (
         <section className="relative pt-32 pb-32 overflow-hidden">
-            <div className="fixed inset-0 bg-[#FFF5EB] -z-10" />
+            <div className="absolute inset-0 -z-10 overflow-hidden">
+                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#F59E0B]/10 rounded-full blur-[100px] animate-pulse" />
+                <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#D97706]/10 rounded-full blur-[100px] animate-pulse delay-700" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-[#FFEDD5]/80 via-white/50 to-[#FEF3C7]/30 rounded-full blur-[60px] opacity-60" />
+            </div>
 
             <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center z-10">
                 <motion.div

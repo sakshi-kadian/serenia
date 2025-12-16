@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, UserCheck, Lock } from "lucide-react";
 
 const principles = [
     {
