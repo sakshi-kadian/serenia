@@ -1,64 +1,127 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, Brain, Lightbulb, AlertTriangle, Heart, Smile, Frown, Meh, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useUser, useAuth } from '@clerk/nextjs';
+import { getMoodTrends, getAnxietyPatterns, getInsights } from '@/utils/api';
 
 export default function InsightsPage() {
+    const { user } = useUser();
+    const { getToken } = useAuth();
+
     const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('week');
+    const [loading, setLoading] = useState(true);
+    const [moodData, setMoodData] = useState<any>(null);
+    const [anxietyData, setAnxietyData] = useState<any>(null);
+    const [insightsData, setInsightsData] = useState<any>(null);
 
-    // Mock data
-    const moodTrend = [
-        { day: 'Mon', score: 65, label: 'Calm' },
-        { day: 'Tue', score: 45, label: 'Anxious' },
-        { day: 'Wed', score: 70, label: 'Happy' },
-        { day: 'Thu', score: 80, label: 'Energetic' },
-        { day: 'Fri', score: 75, label: 'Content' },
-        { day: 'Sat', score: 85, label: 'Joyful' },
-        { day: 'Sun', score: 90, label: 'Peaceful' }
-    ];
-
-    const emotionalBreakdown = [
-        { emotion: 'Happy', percentage: 42, color: 'bg-amber-400', icon: Smile },
-        { emotion: 'Calm', percentage: 28, color: 'bg-sky-400', icon: Heart },
-        { emotion: 'Anxious', percentage: 18, color: 'bg-rose-400', icon: Frown },
-        { emotion: 'Neutral', percentage: 12, color: 'bg-stone-400', icon: Meh }
-    ];
-
-    const aiInsights = [
-        {
-            id: 1,
-            type: 'positive',
-            title: 'Improved Sleep Pattern',
-            description: 'Your mood scores are 23% higher on days when you mention getting 7+ hours of sleep.',
-            icon: TrendingUp,
-            color: 'emerald'
-        },
-        {
-            id: 2,
-            type: 'trigger',
-            title: 'Tuesday Morning Anxiety',
-            description: 'You tend to feel anxious on Tuesday mornings. Consider a 5-minute breathing exercise before work.',
-            icon: AlertTriangle,
-            color: 'rose'
-        },
-        {
-            id: 3,
-            type: 'recommendation',
-            title: 'Social Connection Boost',
-            description: 'Conversations with friends correlate with 31% improvement in your emotional state.',
-            icon: Lightbulb,
-            color: 'sky'
+    // Load analytics data
+    useEffect(() => {
+        if (user) {
+            loadAnalytics();
         }
-    ];
+    }, [user, timeRange]);
 
-    const anxietyTriggers = [
-        { trigger: 'Work deadlines', frequency: 8, severity: 'high' },
-        { trigger: 'Social events', frequency: 5, severity: 'medium' },
-        { trigger: 'Sleep deprivation', frequency: 4, severity: 'high' },
-        { trigger: 'Family concerns', frequency: 3, severity: 'medium' }
-    ];
+    const loadAnalytics = async () => {
+        try {
+            setLoading(true);
+            const token = await getToken();
+            const days = timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 365;
+            const period = timeRange === 'week' ? 'weekly' : 'monthly';
 
-    const maxScore = Math.max(...moodTrend.map(d => d.score));
+            const [mood, anxiety, insights] = await Promise.all([
+                getMoodTrends(user!.id, days, token),
+                getAnxietyPatterns(user!.id, days, token),
+                getInsights(user!.id, period, token)
+            ]);
+
+            setMoodData(mood);
+            setAnxietyData(anxiety);
+            setInsightsData(insights);
+        } catch (err) {
+            console.error('Error loading analytics:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center p-8">
+                <div className="relative mb-8">
+                    <div className="absolute inset-0 bg-sky-100 rounded-full animate-ping opacity-75"></div>
+                    <div className="relative bg-sky-50 w-24 h-24 rounded-full flex items-center justify-center shadow-lg shadow-sky-100 border border-sky-100">
+                        <BarChart3 size={40} className="text-sky-500 animate-pulse" />
+                    </div>
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">Analyzing Your Patterns</h2>
+                <p className="text-stone-500 text-center max-w-sm">
+                    Whiz is gathering your emotional trends to help you understand yourself better.
+                </p>
+            </div>
+        );
+    }
+
+    // Show empty state if no data
+    if (!moodData || moodData.message_count === 0) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50/30 to-blue-50">
+                <div className="absolute top-8 left-8 z-20">
+                    <Link href="/dashboard" className="flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors py-2 px-4 rounded-full hover:bg-white/50 backdrop-blur-sm border border-purple-100/50 text-sm font-medium">
+                        <ArrowLeft size={16} />
+                        <span>Dashboard</span>
+                    </Link>
+                </div>
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <BarChart3 className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+                        <h2 className="text-2xl font-serif text-stone-700 mb-2">No Analytics Yet</h2>
+                        <p className="text-stone-500">Start chatting with Whiz to see your insights!</p>
+                        <Link href="/features/chat" className="mt-4 inline-block px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-500 text-white rounded-xl font-medium hover:shadow-lg transition-all">
+                            Start Chatting
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Transform backend data for charts
+    const moodTrend = moodData.daily_moods?.map((day: any) => ({
+        day: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
+        score: day.mood_score,
+        label: day.dominant_emotion
+    })) || [];
+
+    const emotionalBreakdown = moodData.dominant_emotions?.slice(0, 4).map((item: any, idx: number) => {
+        const colors = ['bg-amber-400', 'bg-sky-400', 'bg-rose-400', 'bg-stone-400'];
+        const icons = [Smile, Heart, Frown, Meh];
+        const total = moodData.dominant_emotions.reduce((sum: number, e: any) => sum + e.count, 0);
+        return {
+            emotion: item.emotion,
+            percentage: Math.round((item.count / total) * 100),
+            color: colors[idx] || 'bg-gray-400',
+            icon: icons[idx] || Meh
+        };
+    }) || [];
+
+    const aiInsights = insightsData?.insights?.map((insight: string, idx: number) => ({
+        id: idx + 1,
+        type: idx === 0 ? 'positive' : idx === 1 ? 'trigger' : 'recommendation',
+        title: insight.split('.')[0],
+        description: insight,
+        icon: idx === 0 ? TrendingUp : idx === 1 ? AlertTriangle : Lightbulb,
+        color: idx === 0 ? 'emerald' : idx === 1 ? 'rose' : 'purple'
+    })) || [];
+
+    const anxietyTriggers = anxietyData?.triggers?.map((item: any) => ({
+        trigger: item.trigger,
+        frequency: item.count,
+        severity: item.count > 5 ? 'high' : item.count > 2 ? 'medium' : 'low'
+    })) || [];
+
+    const maxScore = Math.max(...moodTrend.map((d: any) => d.score));
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-[#2C2A26] font-sans relative flex flex-col">
@@ -88,8 +151,8 @@ export default function InsightsPage() {
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${timeRange === range
-                                    ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md'
-                                    : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
+                                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md'
+                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
                                 }`}
                         >
                             {range.charAt(0).toUpperCase() + range.slice(1)}
@@ -120,7 +183,7 @@ export default function InsightsPage() {
 
                             {/* Chart */}
                             <div className="h-64 flex items-end justify-between gap-3">
-                                {moodTrend.map((data, i) => (
+                                {moodTrend.map((data: any, i: number) => (
                                     <div key={i} className="flex-1 flex flex-col items-center gap-2">
                                         <div className="w-full relative group">
                                             <div
@@ -142,7 +205,7 @@ export default function InsightsPage() {
                         <div className="bg-white/80 backdrop-blur-sm border border-sky-100/50 rounded-2xl p-6 shadow-lg">
                             <h3 className="text-lg font-bold text-stone-900 mb-4">Emotional Breakdown</h3>
                             <div className="space-y-4">
-                                {emotionalBreakdown.map((item, idx) => {
+                                {emotionalBreakdown.map((item: any, idx: number) => {
                                     const Icon = item.icon;
                                     return (
                                         <div key={idx}>
@@ -173,7 +236,7 @@ export default function InsightsPage() {
                             <h3 className="text-lg font-bold text-stone-900">AI-Generated Insights</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {aiInsights.map((insight) => {
+                            {aiInsights.map((insight: any) => {
                                 const Icon = insight.icon;
                                 const colorMap = {
                                     emerald: 'from-emerald-500 to-emerald-600',
@@ -200,7 +263,7 @@ export default function InsightsPage() {
                             <h3 className="text-lg font-bold text-stone-900">Anxiety Triggers</h3>
                         </div>
                         <div className="space-y-3">
-                            {anxietyTriggers.map((trigger, idx) => (
+                            {anxietyTriggers.map((trigger: any, idx: number) => (
                                 <div key={idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-rose-50/50 to-orange-50/30 border border-rose-100 rounded-xl hover:shadow-sm transition-all">
                                     <div className="flex items-center gap-4 flex-1">
                                         <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center text-rose-600 font-bold">
@@ -212,8 +275,8 @@ export default function InsightsPage() {
                                         </div>
                                     </div>
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${trigger.severity === 'high'
-                                            ? 'bg-rose-100 text-rose-700'
-                                            : 'bg-amber-100 text-amber-700'
+                                        ? 'bg-rose-100 text-rose-700'
+                                        : 'bg-amber-100 text-amber-700'
                                         }`}>
                                         {trigger.severity.toUpperCase()}
                                     </span>

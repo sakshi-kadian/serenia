@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSignIn, useSignUp } from '@clerk/nextjs';
 import { ArrowLeft, Mail, Lock, User } from 'lucide-react';
 
 export default function AuthPage() {
     const [isSignIn, setIsSignIn] = useState(true);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -14,8 +16,11 @@ export default function AuthPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
+    const [verificationCode, setVerificationCode] = useState('');
 
     const router = useRouter();
+    const { signIn, setActive: setActiveSignIn } = useSignIn();
+    const { signUp, setActive: setActiveSignUp } = useSignUp();
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,13 +28,19 @@ export default function AuthPage() {
         setError('');
 
         try {
-            // TODO: Add your authentication logic here
-            // For now, just redirect to dashboard
-            setTimeout(() => {
+            if (!signIn) return;
+
+            const result = await signIn.create({
+                identifier: email,
+                password,
+            });
+
+            if (result.status === 'complete') {
+                await setActiveSignIn({ session: result.createdSessionId });
                 router.push('/dashboard');
-            }, 1000);
+            }
         } catch (err: any) {
-            setError('Invalid email or password');
+            setError(err.errors?.[0]?.message || 'Invalid email or password');
         } finally {
             setLoading(false);
         }
@@ -41,13 +52,48 @@ export default function AuthPage() {
         setError('');
 
         try {
-            // TODO: Add your sign up logic here
-            // For now, just redirect to dashboard
-            setTimeout(() => {
-                router.push('/dashboard');
-            }, 1000);
+            if (!signUp) return;
+
+            const result = await signUp.create({
+                emailAddress: email,
+                password,
+                firstName: name.split(' ')[0],
+                lastName: name.split(' ').slice(1).join(' ') || undefined,
+            });
+
+            // Prepare email verification
+            await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+
+            // Show verification UI
+            setIsVerifying(true);
+            setError('Verification code sent to your email!');
         } catch (err: any) {
-            setError('Failed to create account');
+            console.error('Sign up error:', err);
+            setError(err.errors?.[0]?.message || err.message || 'Failed to create account');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            if (!signUp) return;
+
+            const result = await signUp.attemptEmailAddressVerification({
+                code: verificationCode,
+            });
+
+            if (result.status === 'complete') {
+                await setActiveSignUp({ session: result.createdSessionId });
+                router.push('/dashboard');
+            }
+        } catch (err: any) {
+            console.error('Verification error:', err);
+            setError(err.errors?.[0]?.message || 'Invalid verification code');
         } finally {
             setLoading(false);
         }
@@ -59,10 +105,16 @@ export default function AuthPage() {
         setError('');
 
         try {
-            // TODO: Add password reset logic here
+            if (!signIn) return;
+
+            await signIn.create({
+                strategy: 'reset_password_email_code',
+                identifier: email,
+            });
+
             setError('Password reset email sent! Check your inbox.');
         } catch (err: any) {
-            setError('Failed to send reset email');
+            setError(err.errors?.[0]?.message || 'Failed to send reset email');
         } finally {
             setLoading(false);
         }
@@ -97,7 +149,7 @@ export default function AuthPage() {
                             <>
                                 {/* Header */}
                                 <div className="text-center mb-8">
-                                    <h1 className="text-2xl font-serif font-medium bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent tracking-tight">
+                                    <h1 className="text-3xl font-serif font-medium bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent tracking-tight">
                                         Reset Password
                                     </h1>
                                     <p className="text-sm text-yellow-700/70 mt-3">Enter your email to receive a reset link</p>
@@ -119,7 +171,7 @@ export default function AuthPage() {
                                             onChange={(e) => setEmail(e.target.value)}
                                             required
                                             disabled={loading}
-                                            className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-200/50 hover:border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400 focus:bg-white transition-all placeholder:text-yellow-600/50 text-sm text-yellow-900 font-medium shadow-sm disabled:opacity-50"
+                                            className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-100/60 hover:border-yellow-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-200/60 focus:border-yellow-300 focus:bg-white transition-all placeholder:text-yellow-500/60 text-sm text-yellow-700 font-medium shadow-sm disabled:opacity-50"
                                             placeholder="Email Address"
                                         />
                                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-yellow-500/60 group-focus-within:text-yellow-600 transition-colors" size={16} />
@@ -129,7 +181,7 @@ export default function AuthPage() {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full py-3.5 mt-2 bg-gradient-to-r from-yellow-400 to-yellow-500 border border-yellow-600/20 shadow-[0_8px_24px_-4px_rgba(202,138,4,0.4)] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-[0_12px_32px_-4px_rgba(202,138,4,0.5)] hover:from-yellow-500 hover:to-yellow-600 hover:scale-[1.02] transform transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full py-3.5 mt-2 bg-yellow-200 shadow-[0_8px_24px_-4px_rgba(250,204,21,0.3)] text-yellow-800 rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-[0_12px_32px_-4px_rgba(250,204,21,0.4)] hover:bg-yellow-300 hover:scale-[1.02] transform transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {loading ? 'Sending...' : 'Send Reset Link'}
                                     </button>
@@ -142,12 +194,63 @@ export default function AuthPage() {
                                     </div>
                                 </form>
                             </>
+                        ) : isVerifying ? (
+                            /* EMAIL VERIFICATION VIEW */
+                            <>
+                                {/* Header */}
+                                <div className="text-center mb-8">
+                                    <h1 className="text-3xl font-serif font-medium bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent tracking-tight">
+                                        Verify Your Email
+                                    </h1>
+                                    <p className="text-sm text-yellow-700/70 mt-3">Enter the code sent to {email}</p>
+                                </div>
+
+                                {/* Error/Success Message */}
+                                {error && (
+                                    <div className={`mb-4 p-3 border rounded-lg text-xs ${error.includes('sent') ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                                        {error}
+                                    </div>
+                                )}
+
+                                {/* FORM */}
+                                <form className="space-y-3" onSubmit={handleVerifyEmail}>
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            value={verificationCode}
+                                            onChange={(e) => setVerificationCode(e.target.value)}
+                                            required
+                                            disabled={loading}
+                                            maxLength={6}
+                                            className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-100/60 hover:border-yellow-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-200/60 focus:border-yellow-300 focus:bg-white transition-all placeholder:text-yellow-500/60 text-sm text-yellow-700 font-medium shadow-sm disabled:opacity-50 text-center tracking-widest text-lg"
+                                            placeholder="000000"
+                                        />
+                                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-yellow-500/60 group-focus-within:text-yellow-600 transition-colors" size={16} />
+                                    </div>
+
+                                    {/* THE BUTTON */}
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full py-3.5 mt-2 bg-yellow-200 shadow-[0_8px_24px_-4px_rgba(250,204,21,0.3)] text-yellow-800 rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-[0_12px_32px_-4px_rgba(250,204,21,0.4)] hover:bg-yellow-300 hover:scale-[1.02] transform transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? 'Verifying...' : 'Verify Email'}
+                                    </button>
+
+                                    {/* Back to Sign Up */}
+                                    <div className="text-center pt-3">
+                                        <button type="button" onClick={() => { setIsVerifying(false); setError(''); }} className="text-xs text-yellow-700 hover:text-yellow-800 font-medium transition-colors uppercase tracking-wider cursor-pointer">
+                                            Back to Sign Up
+                                        </button>
+                                    </div>
+                                </form>
+                            </>
                         ) : (
                             /* LOGIN/SIGNUP VIEW */
                             <>
                                 {/* Header */}
                                 <div className="text-center mb-8">
-                                    <h1 className="text-2xl font-serif font-medium bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent tracking-tight">
+                                    <h1 className="text-3xl font-serif font-medium bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent tracking-tight">
                                         {isSignIn ? "Welcome Back" : "Join Serenia"}
                                     </h1>
                                 </div>
@@ -156,19 +259,19 @@ export default function AuthPage() {
                                 <div className="relative p-1 bg-yellow-100 rounded-xl flex mb-6">
                                     {/* Sliding background */}
                                     <div
-                                        className={`absolute inset-y-1 w-[calc(50%-4px)] bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-lg shadow-md transition-all duration-300 ${isSignIn ? 'left-1' : 'left-[calc(50%+2px)]'}`}
+                                        className={`absolute inset-y-1 w-[calc(50%-4px)] bg-yellow-200 rounded-lg shadow-md transition-all duration-300 ${isSignIn ? 'left-1' : 'left-[calc(50%+2px)]'}`}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => { setIsSignIn(true); setError(''); }}
-                                        className={`relative z-10 w-1/2 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors duration-300 cursor-pointer ${isSignIn ? 'text-white' : 'text-yellow-700/70'}`}
+                                        className={`relative z-10 w-1/2 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors duration-300 cursor-pointer ${isSignIn ? 'text-yellow-900' : 'text-yellow-700/70'}`}
                                     >
                                         Sign In
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => { setIsSignIn(false); setError(''); }}
-                                        className={`relative z-10 w-1/2 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors duration-300 cursor-pointer ${!isSignIn ? 'text-white' : 'text-yellow-700/70'}`}
+                                        className={`relative z-10 w-1/2 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors duration-300 cursor-pointer ${!isSignIn ? 'text-yellow-900' : 'text-yellow-700/70'}`}
                                     >
                                         Sign Up
                                     </button>
@@ -191,7 +294,7 @@ export default function AuthPage() {
                                                 onChange={(e) => setName(e.target.value)}
                                                 required
                                                 disabled={loading}
-                                                className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-200/50 hover:border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400 focus:bg-white transition-all placeholder:text-yellow-600/50 text-sm text-yellow-900 font-medium shadow-sm disabled:opacity-50"
+                                                className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-100/60 hover:border-yellow-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-200/60 focus:border-yellow-300 focus:bg-white transition-all placeholder:text-yellow-500/60 text-sm text-yellow-700 font-medium shadow-sm disabled:opacity-50"
                                                 placeholder="Full Name"
                                             />
                                             <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-yellow-500/60 group-focus-within:text-yellow-600 transition-colors" size={16} />
@@ -205,7 +308,7 @@ export default function AuthPage() {
                                             onChange={(e) => setEmail(e.target.value)}
                                             required
                                             disabled={loading}
-                                            className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-200/50 hover:border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400 focus:bg-white transition-all placeholder:text-yellow-600/50 text-sm text-yellow-900 font-medium shadow-sm disabled:opacity-50"
+                                            className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-100/60 hover:border-yellow-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-200/60 focus:border-yellow-300 focus:bg-white transition-all placeholder:text-yellow-500/60 text-sm text-yellow-700 font-medium shadow-sm disabled:opacity-50"
                                             placeholder="Email Address"
                                         />
                                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-yellow-500/60 group-focus-within:text-yellow-600 transition-colors" size={16} />
@@ -218,7 +321,7 @@ export default function AuthPage() {
                                             onChange={(e) => setPassword(e.target.value)}
                                             required
                                             disabled={loading}
-                                            className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-200/50 hover:border-yellow-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400 focus:bg-white transition-all placeholder:text-yellow-600/50 text-sm text-yellow-900 font-medium shadow-sm disabled:opacity-50"
+                                            className="w-full pl-10 pr-4 py-3.5 bg-white/70 border border-yellow-100/60 hover:border-yellow-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-200/60 focus:border-yellow-300 focus:bg-white transition-all placeholder:text-yellow-500/60 text-sm text-yellow-700 font-medium shadow-sm disabled:opacity-50"
                                             placeholder="Password"
                                         />
                                         <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-yellow-500/60 group-focus-within:text-yellow-600 transition-colors" size={16} />
@@ -234,7 +337,7 @@ export default function AuthPage() {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full py-3.5 mt-2 bg-gradient-to-r from-yellow-400 to-yellow-500 border border-yellow-600/20 shadow-[0_8px_24px_-4px_rgba(202,138,4,0.4)] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-[0_12px_32px_-4px_rgba(202,138,4,0.5)] hover:from-yellow-500 hover:to-yellow-600 hover:scale-[1.02] transform transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full py-3.5 mt-2 bg-yellow-200 shadow-[0_8px_24px_-4px_rgba(250,204,21,0.3)] text-yellow-800 rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-[0_12px_32px_-4px_rgba(250,204,21,0.4)] hover:bg-yellow-300 hover:scale-[1.02] transform transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {loading ? 'Please wait...' : (isSignIn ? "Continue" : "Create Account")}
                                     </button>

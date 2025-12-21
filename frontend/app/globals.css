@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #FDFBF7;
   --foreground: #171717;
 }
 
@@ -14,7 +14,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #ffffff;
+    --background: #FDFBF7;
     /* Force light for now as per design */
     --foreground: #171717;
   }
@@ -73,4 +73,50 @@ body {
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* Effects */
+@layer utilities {
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 bg-[200%_auto];
+    animation: gradient 6s ease infinite;
+  }
+
+  .glass-card {
+    @apply bg-white/40 backdrop-blur-xl border border-white/50 shadow-xl;
+  }
+
+  .glass-panel {
+    @apply bg-white/60 backdrop-blur-2xl border border-white/20 shadow-2xl;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }

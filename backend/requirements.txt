@@ -1,0 +1,45 @@
+# FastAPI and Web Server
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pydantic-settings
+
+# NLP and AI (using latest versions with pre-built wheels)
+transformers
+torch
+spacy>=3.8.0
+nltk
+sentence-transformers
+
+# Database
+psycopg2-binary
+sqlalchemy
+alembic
+
+# Environment and Configuration
+python-dotenv
+
+# HTTP and API
+httpx
+requests
+
+# Data Processing
+pandas
+numpy
+
+# Google Gemini API (for AI responses)
+google-generativeai
+
+# Utilities
+python-dateutil
+pytz
+
+# Security
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Testing (optional)
+pytest
+pytest-asyncio
+

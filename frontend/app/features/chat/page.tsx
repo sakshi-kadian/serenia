@@ -1,20 +1,33 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Send, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Sparkles, Send, ArrowLeft, AlertCircle, BookOpen } from 'lucide-react';
 import Link from 'next/link';
-import { sendMessage, ChatRequest, ChatResponse, Message } from '@/utils/api';
+import { useUser, useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { sendChatMessage, generateReflection, ChatMessage, ChatResponse } from '@/utils/api';
+
+interface Message {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    created_at: string;
+    emotion?: string;
+    anxiety_detected?: boolean;
+    crisis_detected: boolean;
+}
 
 export default function ChatPage() {
+    const { user } = useUser();
+    const { getToken } = useAuth();
+    const router = useRouter();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
+    const [generatingReflection, setGeneratingReflection] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [crisisDetected, setCrisisDetected] = useState(false);
     const [crisisResources, setCrisisResources] = useState<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    // User ID - replace with your auth system later
-    const userId = "18ea6a35-a0ca-4f97-bb35-6ec043734ea2";
 
     // Auto-scroll to bottom when new messages arrive
     const scrollToBottom = () => {
@@ -27,19 +40,42 @@ export default function ChatPage() {
 
     // Send initial greeting
     useEffect(() => {
+        const userName = user?.firstName || user?.username || 'Traveler';
         setMessages([
             {
                 id: 'greeting',
                 role: 'assistant',
-                content: "Hello, Traveler. I'm Whiz. How is your heart feeling today?",
+                content: `Hello, ${userName}. I'm WHIZ. How are you feeling today?`,
                 created_at: new Date().toISOString(),
                 crisis_detected: false
             }
         ]);
-    }, []);
+    }, [user]);
+
+    const handleGenerateReflection = async () => {
+        if (!conversationId || !user) return;
+
+        try {
+            setGeneratingReflection(true);
+            const token = await getToken();
+
+            await generateReflection({
+                user_id: user.id,
+                conversation_id: conversationId
+            }, token);
+
+            // Redirect to journal to see the reflection
+            router.push('/features/journal');
+        } catch (err) {
+            console.error('Error generating reflection:', err);
+            alert('Failed to generate reflection. Please try again.');
+        } finally {
+            setGeneratingReflection(false);
+        }
+    };
 
     const handleSend = async () => {
-        if (!input.trim() || loading) return;
+        if (!input.trim() || loading || !user) return;
 
         const userMessageContent = input;
         setInput("");
@@ -56,14 +92,17 @@ export default function ChatPage() {
         setMessages(prev => [...prev, tempUserMessage]);
 
         try {
+            // Get auth token
+            const token = await getToken();
+
             // Send message to backend
-            const request: ChatRequest = {
-                user_id: userId,
+            const request: ChatMessage = {
+                user_id: user.id,
                 message: userMessageContent,
                 conversation_id: conversationId || undefined
             };
 
-            const response: ChatResponse = await sendMessage(request);
+            const response: ChatResponse = await sendChatMessage(request, token);
 
             // Update conversation ID if this is the first message
             if (!conversationId) {
@@ -71,9 +110,9 @@ export default function ChatPage() {
             }
 
             // Update crisis detection state
-            if (response.crisis_detected) {
+            if (response.crisis?.detected) {
                 setCrisisDetected(true);
-                setCrisisResources(response.crisis_resources);
+                setCrisisResources(response.crisis.resources);
             }
 
             // Add AI response to messages
@@ -82,9 +121,9 @@ export default function ChatPage() {
                 role: 'assistant',
                 content: response.response,
                 created_at: response.timestamp,
-                sentiment_label: response.sentiment.label,
-                intent: response.intent.primary_intent,
-                crisis_detected: response.crisis_detected
+                emotion: response.emotion?.label,
+                anxiety_detected: response.anxiety?.detected,
+                crisis_detected: response.crisis?.detected || false
             };
 
             setMessages(prev => [...prev, aiMessage]);
@@ -115,20 +154,28 @@ export default function ChatPage() {
             </div>
 
             {/* Header */}
-            <header className="relative z-50 px-6 py-4 flex items-center gap-4 border-b border-amber-100/50 bg-white/80 backdrop-blur-xl sticky top-0">
-                <Link href="/dashboard" className="p-2 hover:bg-amber-50 rounded-full transition-colors text-amber-600">
-                    <ArrowLeft size={20} />
-                </Link>
-                <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 bg-gradient-to-br from-amber-400 to-amber-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-200">
-                        <Sparkles size={22} />
-                    </div>
-                    <div>
-                        <h1 className="font-bold text-stone-900">Whiz</h1>
-                        <p className="text-xs text-stone-500 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            Always here for you
-                        </p>
+            <header className="relative z-50 px-6 py-4 flex items-center justify-between gap-4 border-b border-amber-100/50 bg-white/80 backdrop-blur-xl sticky top-0">
+                <div className="flex items-center gap-4">
+                    <Link href="/dashboard" className="p-2 hover:bg-amber-50 rounded-full transition-colors text-amber-600">
+                        <ArrowLeft size={20} />
+                    </Link>
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl group-hover:scale-105 transition-transform duration-300">
+                            <img
+                                src="/assets/whiz.png"
+                                alt="Whiz"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <div>
+                            <h1 className="font-serif font-bold text-xl text-stone-900">Whiz</h1>
+                            <p className="text-xs text-stone-500 flex items-center gap-1.5 font-medium">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse relative">
+                                    <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75"></span>
+                                </span>
+                                Always here for you
+                            </p>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -165,28 +212,33 @@ export default function ChatPage() {
             {/* Chat Area */}
             <main className="flex-1 relative z-10 w-full max-w-4xl mx-auto p-4 md:p-6 overflow-y-auto flex flex-col gap-5">
                 {messages.map((msg) => (
-                    <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group animate-in slide-in-from-bottom-2 duration-500`}>
                         {/* Whiz Avatar (left side for assistant) */}
                         {msg.role === 'assistant' && (
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-200 flex-shrink-0">
-                                <Sparkles size={18} />
+                            <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 mt-1 shadow-sm border border-stone-100 bg-white">
+                                <img
+                                    src="/assets/whiz.png"
+                                    alt="Whiz"
+                                    className="w-full h-full object-contain p-1"
+                                />
                             </div>
                         )}
 
                         {/* Message Bubble */}
                         <div className={`
-                            max-w-[75%] px-5 py-3.5 rounded-2xl text-base leading-relaxed
+                            max-w-[75%] md:max-w-[65%] px-6 py-4 rounded-[1.5rem] text-[1.05rem] leading-relaxed shadow-sm relative
                             ${msg.role === 'user'
-                                ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-200/50 rounded-br-md'
-                                : 'bg-white border border-amber-100/50 text-stone-700 shadow-sm rounded-bl-md'}
+                                ? 'bg-yellow-50 text-stone-800 font-medium rounded-br-none shadow-md shadow-stone-100 border border-yellow-100'
+                                : 'bg-white border border-stone-100 text-stone-700 rounded-bl-none shadow-sm shadow-stone-100'}
                         `}>
                             <p className="whitespace-pre-wrap">{msg.content}</p>
 
                             {/* Emotion badge for Whiz messages */}
-                            {msg.role === 'assistant' && msg.sentiment_label && (
-                                <div className="mt-2 pt-2 border-t border-stone-100">
-                                    <span className="text-xs text-amber-600 font-medium">
-                                        Detected: {msg.sentiment_label}
+                            {msg.role === 'assistant' && msg.emotion && (
+                                <div className="mt-3 pt-3 border-t border-stone-100 flex items-center gap-2">
+                                    <Sparkles size={12} className="text-yellow-500" />
+                                    <span className="text-xs text-stone-400 font-medium uppercase tracking-wider">
+                                        Detected: <span className="text-yellow-600 font-bold">{msg.emotion}</span>
                                     </span>
                                 </div>
                             )}
@@ -194,8 +246,8 @@ export default function ChatPage() {
 
                         {/* User Avatar (right side for user) */}
                         {msg.role === 'user' && (
-                            <div className="w-9 h-9 rounded-xl bg-stone-200 flex items-center justify-center text-stone-600 flex-shrink-0">
-                                <span className="text-sm font-bold">You</span>
+                            <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-700 flex-shrink-0 mt-1 font-serif font-bold border border-yellow-200 shadow-sm text-lg">
+                                <span>{user?.firstName?.charAt(0) || user?.username?.charAt(0) || 'U'}</span>
                             </div>
                         )}
                     </div>
@@ -203,9 +255,13 @@ export default function ChatPage() {
 
                 {/* Loading indicator */}
                 {loading && (
-                    <div className="flex gap-3 justify-start">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-200 flex-shrink-0">
-                            <Sparkles size={18} />
+                    <div className="flex gap-4 justify-start animate-pulse">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-stone-100">
+                            <img
+                                src="/assets/whiz.png"
+                                alt="Whiz"
+                                className="w-full h-full object-contain p-1"
+                            />
                         </div>
                         <div className="bg-white border border-amber-100/50 rounded-2xl rounded-bl-md px-5 py-4 shadow-sm">
                             <div className="flex gap-1.5">
@@ -230,12 +286,12 @@ export default function ChatPage() {
                         placeholder="Share what's on your mind..."
                         onKeyDown={(e) => e.key === 'Enter' && !loading && handleSend()}
                         disabled={loading}
-                        className="flex-1 bg-amber-50/50 border-2 border-amber-100 rounded-full px-6 py-4 text-base focus:ring-2 focus:ring-amber-300 focus:border-amber-300 transition-all outline-none disabled:opacity-50 placeholder:text-stone-400"
+                        className="flex-1 bg-white border border-stone-200 rounded-full px-6 py-4 text-base focus:ring-2 focus:ring-amber-200 focus:border-amber-300 transition-all outline-none disabled:opacity-50 placeholder:text-stone-400 shadow-sm"
                     />
                     <button
                         onClick={handleSend}
                         disabled={loading || !input.trim()}
-                        className="w-14 h-14 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-full hover:scale-105 hover:shadow-xl hover:shadow-amber-300/50 transition-all shadow-lg shadow-amber-200/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
+                        className="w-14 h-14 bg-yellow-100 text-yellow-600 rounded-full hover:scale-105 hover:bg-yellow-200 transition-all shadow-md shadow-yellow-100 border border-yellow-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
                     >
                         <Send size={20} />
                     </button>
