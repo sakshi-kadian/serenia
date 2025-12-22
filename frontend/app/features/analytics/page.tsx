@@ -26,12 +26,12 @@ export default function InsightsPage() {
         try {
             setLoading(true);
             const token = await getToken();
-            const days = timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 365;
-            const period = timeRange === 'week' ? 'weekly' : 'monthly';
+            // Pass timeRange directly as period ('week', 'month', 'year') matches backend expectations
+            const period = timeRange === 'week' ? 'weekly' : 'monthly'; // For insights endpoint
 
             const [mood, anxiety, insights] = await Promise.all([
-                getMoodTrends(user!.id, days, token),
-                getAnxietyPatterns(user!.id, days, token),
+                getMoodTrends(user!.id, timeRange, token), // Pass 'week', 'month', 'year'
+                getAnxietyPatterns(user!.id, 30, token),
                 getInsights(user!.id, period, token)
             ]);
 
@@ -66,19 +66,19 @@ export default function InsightsPage() {
     // Show empty state if no data
     if (!moodData || moodData.message_count === 0) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50/30 to-blue-50">
+            <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">
                 <div className="absolute top-8 left-8 z-20">
-                    <Link href="/dashboard" className="flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors py-2 px-4 rounded-full hover:bg-white/50 backdrop-blur-sm border border-purple-100/50 text-sm font-medium">
+                    <Link href="/dashboard" className="flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors py-2 px-4 rounded-full hover:bg-white/50 backdrop-blur-sm border border-sky-100/50 text-sm font-medium">
                         <ArrowLeft size={16} />
                         <span>Dashboard</span>
                     </Link>
                 </div>
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center">
-                        <BarChart3 className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+                        <BarChart3 className="w-16 h-16 text-sky-400 mx-auto mb-4" />
                         <h2 className="text-2xl font-serif text-stone-700 mb-2">No Analytics Yet</h2>
                         <p className="text-stone-500">Start chatting with Whiz to see your insights!</p>
-                        <Link href="/features/chat" className="mt-4 inline-block px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-500 text-white rounded-xl font-medium hover:shadow-lg transition-all">
+                        <Link href="/features/chat" className="mt-4 inline-block px-6 py-3 bg-sky-400 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-sky-200 transition-all">
                             Start Chatting
                         </Link>
                     </div>
@@ -87,12 +87,68 @@ export default function InsightsPage() {
         );
     }
 
-    // Transform backend data for charts
-    const moodTrend = moodData.daily_moods?.map((day: any) => ({
-        day: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
-        score: day.mood_score,
-        label: day.dominant_emotion
-    })) || [];
+    // Transform backend data for charts with appropriate labels
+    let moodTrend = [];
+
+    if (timeRange === 'year' && moodData.daily_moods) {
+        // Aggregate 365 days into 12 months
+        const monthlyData: { [key: string]: { score: number, count: number, emotions: any[] } } = {};
+        const monthOrder: string[] = [];
+
+        moodData.daily_moods.forEach((day: any) => {
+            const date = new Date(day.date);
+            const monthLabel = date.toLocaleDateString('en-US', { month: 'short' }); // "Jan", "Feb"
+
+            if (!monthlyData[monthLabel]) {
+                monthlyData[monthLabel] = { score: 0, count: 0, emotions: [] };
+                monthOrder.push(monthLabel);
+            }
+
+            monthlyData[monthLabel].score += day.mood_score;
+            monthlyData[monthLabel].count += 1;
+            monthlyData[monthLabel].emotions.push(day.dominant_emotion);
+        });
+
+        // Ensure we respect date order (though the map iteration usually does, explicitly using the order of appearance)
+        moodTrend = monthOrder.map(month => {
+            const data = monthlyData[month];
+            const avgScore = data.score / data.count;
+            // Find most frequent emotion for the month
+            const emotionCounts = data.emotions.reduce((acc: any, curr: any) => {
+                acc[curr] = (acc[curr] || 0) + 1;
+                return acc;
+            }, {});
+            const topEmotion = Object.keys(emotionCounts).reduce((a, b) => emotionCounts[a] > emotionCounts[b] ? a : b);
+
+            return {
+                day: month, // Label is "Jan", "Feb"
+                score: avgScore,
+                label: topEmotion,
+                fullDate: month
+            };
+        });
+    } else {
+        // Week and Month views (Daily bars)
+        moodTrend = moodData.daily_moods?.map((day: any) => {
+            const date = new Date(day.date);
+            let label = '';
+
+            if (timeRange === 'week') {
+                // Show day names (Mon, Tue...)
+                label = date.toLocaleDateString('en-US', { weekday: 'short' });
+            } else if (timeRange === 'month') {
+                // Show just the date number (1, 2, 3...) to keep it clean
+                label = date.getDate().toString();
+            }
+
+            return {
+                day: label,
+                score: day.mood_score,
+                label: day.dominant_emotion,
+                fullDate: day.date
+            };
+        }) || [];
+    }
 
     const emotionalBreakdown = moodData.dominant_emotions?.slice(0, 4).map((item: any, idx: number) => {
         const colors = ['bg-amber-400', 'bg-sky-400', 'bg-rose-400', 'bg-stone-400'];
@@ -173,7 +229,9 @@ export default function InsightsPage() {
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h3 className="text-lg font-bold text-stone-900">Mood Trend</h3>
-                                    <p className="text-sm text-stone-500">Last 7 days</p>
+                                    <p className="text-sm text-stone-500">
+                                        {timeRange === 'week' ? 'Last 7 days' : timeRange === 'month' ? 'Last 30 days' : 'Last 12 months'}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-sm font-bold">
                                     <TrendingUp size={16} />
@@ -241,6 +299,7 @@ export default function InsightsPage() {
                                 const colorMap = {
                                     emerald: 'from-emerald-500 to-emerald-600',
                                     rose: 'from-rose-500 to-rose-600',
+                                    purple: 'from-purple-500 to-purple-600',
                                     sky: 'from-sky-500 to-sky-600'
                                 };
                                 return (

@@ -29,7 +29,7 @@ pandas
 numpy
 
 # Google Gemini API (for AI responses)
-google-generativeai
+google-genai
 
 # Utilities
 python-dateutil

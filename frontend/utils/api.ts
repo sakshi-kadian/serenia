@@ -210,10 +210,10 @@ export async function getUserReflections(
  */
 export async function getMoodTrends(
     userId: string,
-    days: number = 7,
+    period: 'week' | 'month' | 'year' = 'week',
     token?: string | null
 ): Promise<MoodTrends> {
-    return httpClient.get<MoodTrends>(`/api/insights/${userId}/mood-trends?days=${days}`, token);
+    return httpClient.get<MoodTrends>(`/api/insights/${userId}/mood-trends?period=${period}`, token);
 }
 
 /**

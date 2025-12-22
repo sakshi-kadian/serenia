@@ -1,8 +1,8 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSignIn, useSignUp } from '@clerk/nextjs';
+import { useSignIn, useSignUp, useUser } from '@clerk/nextjs';
 import { ArrowLeft, Mail, Lock, User } from 'lucide-react';
 
 export default function AuthPage() {
@@ -21,6 +21,14 @@ export default function AuthPage() {
     const router = useRouter();
     const { signIn, setActive: setActiveSignIn } = useSignIn();
     const { signUp, setActive: setActiveSignUp } = useSignUp();
+    const { isSignedIn, isLoaded } = useUser();
+
+    // Redirect if already signed in
+    useEffect(() => {
+        if (isLoaded && isSignedIn) {
+            router.push('/dashboard');
+        }
+    }, [isLoaded, isSignedIn, router]);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();

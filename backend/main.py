@@ -39,6 +39,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on application startup"""
+    from database import init_db, test_connection
+    
+    print("=" * 50)
+    print("Initializing Serenia Backend...")
+    print("=" * 50)
+    
+    # Test database connection
+    if test_connection():
+        print("✓ Database connection successful")
+        
+        # Create tables if they don't exist
+        try:
+            init_db()
+            print("✓ Database tables initialized")
+        except Exception as e:
+            print(f"✗ Database initialization failed: {e}")
+    else:
+        print("✗ Database connection failed")
+    
+    print("=" * 50)
+
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -99,7 +125,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=port,
         reload=True if os.getenv("APP_ENV") == "development" else False
     )

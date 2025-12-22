@@ -24,7 +24,7 @@ class AnalyticsEngine:
         self, 
         user_id: str, 
         db: Session,
-        days: int = 7
+        period: str = "week"
     ) -> Dict:
         """
         Calculate mood trends over specified period
@@ -32,14 +32,34 @@ class AnalyticsEngine:
         Args:
             user_id: User ID
             db: Database session
-            days: Number of days to analyze
+            period: 'week', 'month', or 'year'
         
         Returns:
             Dictionary with mood trends
         """
-        # Get date range
-        end_date = datetime.utcnow()
-        start_date = end_date - timedelta(days=days)
+        # Calculate date range
+        now = datetime.utcnow()
+        
+        if period == "year":
+            # Current Year (Jan 1 - Dec 31)
+            start_date = datetime(now.year, 1, 1)
+            end_date = datetime(now.year, 12, 31, 23, 59, 59)
+            period_days = 365 # Approx
+        elif period == "month":
+            # Current Month (1st - Last day)
+            start_date = datetime(now.year, now.month, 1)
+            # Get last day of month
+            if now.month == 12:
+                next_month = datetime(now.year + 1, 1, 1)
+            else:
+                next_month = datetime(now.year, now.month + 1, 1)
+            end_date = next_month - timedelta(seconds=1)
+            period_days = (end_date - start_date).days + 1
+        else:
+            # Week (Last 7 days) - Keep this rolling for immediate context
+            start_date = now - timedelta(days=6) # 6 days ago + today = 7 days
+            end_date = now
+            period_days = 7
         
         # Get all user messages in date range
         messages = db.query(Message).join(Conversation).filter(
@@ -50,11 +70,11 @@ class AnalyticsEngine:
             Message.emotion.isnot(None)
         ).order_by(Message.timestamp).all()
         
-        if not messages:
-            return {
-                "period_days": days,
+        if not messages and period == "week": # For week we return empty if no messages, for others we yield the structure
+             return {
+                "period_days": period_days,
                 "message_count": 0,
-                "daily_moods": [],
+                "daily_moods": [], # Will be filled below if we let it fall through, but keeping old behavior for empty week check
                 "dominant_emotions": [],
                 "average_sentiment": "neutral",
                 "trend": "stable"
@@ -71,17 +91,34 @@ class AnalyticsEngine:
                 "confidence": msg.emotion_confidence
             })
         
-        # Calculate daily mood scores
+        # Fill in all days in the range (even days with no messages)
         daily_moods = []
-        for day, emotions in sorted(daily_emotions.items()):
-            # Calculate mood score (-1 to 1, negative to positive)
-            mood_score = self._calculate_mood_score(emotions)
+        current_date = start_date.date()
+        end_date_only = end_date.date()
+        
+        while current_date <= end_date_only:
+            day_key = current_date.isoformat()
+            
+            if day_key in daily_emotions:
+                # Day has messages - calculate mood score
+                emotions = daily_emotions[day_key]
+                mood_score = self._calculate_mood_score(emotions)
+                dominant_emotion = Counter([e["emotion"] for e in emotions]).most_common(1)[0][0]
+                emotion_count = len(emotions)
+            else:
+                # Day has no messages - use neutral values
+                mood_score = 0.5  # Neutral/positive baseline
+                dominant_emotion = "neutral"
+                emotion_count = 0
+            
             daily_moods.append({
-                "date": day,
+                "date": day_key,
                 "mood_score": mood_score,
-                "emotion_count": len(emotions),
-                "dominant_emotion": Counter([e["emotion"] for e in emotions]).most_common(1)[0][0]
+                "emotion_count": emotion_count,
+                "dominant_emotion": dominant_emotion
             })
+            
+            current_date += timedelta(days=1)
         
         # Get dominant emotions overall
         all_emotions = [msg.emotion for msg in messages]
@@ -90,8 +127,12 @@ class AnalyticsEngine:
             for emotion, count in Counter(all_emotions).most_common(5)
         ]
         
-        # Calculate average sentiment
-        avg_score = sum(d["mood_score"] for d in daily_moods) / len(daily_moods)
+        # Calculate average sentiment (only from days with messages)
+        days_with_messages = [d for d in daily_moods if d["emotion_count"] > 0]
+        if days_with_messages:
+            avg_score = sum(d["mood_score"] for d in days_with_messages) / len(days_with_messages)
+        else:
+            avg_score = 0.5
         average_sentiment = self._score_to_sentiment(avg_score)
         
         # Detect trend
@@ -201,7 +242,7 @@ class AnalyticsEngine:
         days = 7 if period == "weekly" else 30
         
         # Get mood trends
-        mood_data = self.calculate_mood_trends(user_id, db, days)
+        mood_data = self.calculate_mood_trends(user_id, db, period)
         
         # Get anxiety patterns
         anxiety_data = self.analyze_anxiety_patterns(user_id, db, days)
