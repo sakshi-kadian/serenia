@@ -24,8 +24,8 @@ export default function Homepage() {
 
             {/* Global Hero Background Blob */}
             <div className="absolute top-0 left-0 w-full h-[120vh] overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1400px] h-[1400px] bg-gradient-to-b from-amber-100/60 via-yellow-50/30 to-transparent rounded-full blur-[120px] opacity-100" />
-                <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-amber-200/30 to-transparent rounded-full blur-[100px] animate-pulse duration-[3000ms]" />
+                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1400px] h-[1400px] bg-gradient-to-b from-amber-100/90 via-amber-50/60 to-transparent rounded-full blur-[120px] opacity-100" />
+                <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-amber-200/50 to-transparent rounded-full blur-[100px] animate-pulse duration-[3000ms]" />
             </div>
 
             {/* HEADER */}
