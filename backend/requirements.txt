@@ -5,17 +5,17 @@ python-multipart
 pydantic
 pydantic-settings
 
-# NLP and AI (using latest versions with pre-built wheels)
+# NLP and AI stack
 transformers
 torch
 spacy>=3.8.0
 nltk
 sentence-transformers
+numpy
 
 # Database
-psycopg2-binary
 sqlalchemy
-alembic
+psycopg2-binary
 
 # Environment and Configuration
 python-dotenv
@@ -24,22 +24,9 @@ python-dotenv
 httpx
 requests
 
-# Data Processing
-pandas
-numpy
-
-# Google Gemini API (for AI responses)
+# Google Gemini API
 google-genai
 
 # Utilities
 python-dateutil
 pytz
-
-# Security
-python-jose[cryptography]
-passlib[bcrypt]
-
-# Testing (optional)
-pytest
-pytest-asyncio
-

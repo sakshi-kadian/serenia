@@ -3,8 +3,8 @@ import { ClerkProvider } from '@clerk/nextjs';
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Serenia - Emotion-Aware AI",
-  description: "Your emotion-aware companion",
+  title: "Serenia - Your Digital Sanctuary",
+  description: "Your Emotion Aware Platform",
 };
 
 export default function RootLayout({

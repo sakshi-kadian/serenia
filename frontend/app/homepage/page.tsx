@@ -22,7 +22,7 @@ export default function Homepage() {
         // Base Background
         <div className="min-h-screen bg-[#FDFBF7] text-[#4A4741] font-sans overflow-x-hidden relative">
 
-            {/* Global Hero Background Glow (Firework/Blob) */}
+            {/* Global Hero Background Blob */}
             <div className="absolute top-0 left-0 w-full h-[120vh] overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1400px] h-[1400px] bg-gradient-to-b from-amber-100/60 via-yellow-50/30 to-transparent rounded-full blur-[120px] opacity-100" />
                 <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-amber-200/30 to-transparent rounded-full blur-[100px] animate-pulse duration-[3000ms]" />
@@ -94,8 +94,8 @@ export default function Homepage() {
                             transition={{ duration: 0.8, delay: 0.4 }}
                             className="text-lg md:text-xl text-[#6B665E] mb-12 max-w-2xl mx-auto leading-relaxed font-light"
                         >
-                            A digital sanctuary that listens, understands, and reflects. <br className="hidden md:block" />
-                            Connect with your inner world through music and meaningful dialogue.
+                            A digital sanctuary that listens, understands and reflects. <br className="hidden md:block" />
+                            Your journey to serenity begins here.
                         </motion.p>
 
                         <motion.div
