@@ -11,10 +11,11 @@ import {
     BarChart3
 } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, useAuth } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 
 export default function DashboardPage() {
     const { user } = useUser();
+    const { signOut } = useClerk();
     const [greeting, setGreeting] = useState("Good morning");
     const [date, setDate] = useState("");
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -99,13 +100,13 @@ export default function DashboardPage() {
                                     <div className="md:hidden px-3 py-2 text-xs font-medium text-stone-500 border-b border-stone-50 mb-1">
                                         {user?.firstName || user?.username || 'Friend'}
                                     </div>
-                                    <Link
-                                        href="/"
-                                        className="w-full text-left px-3 py-2.5 text-xs font-bold text-stone-900 hover:bg-stone-100 rounded-xl flex items-center gap-2 transition-colors uppercase tracking-wider"
+                                    <button
+                                        onClick={() => signOut({ redirectUrl: '/' })}
+                                        className="w-full text-left px-3 py-2.5 text-xs font-bold text-stone-900 hover:bg-stone-100 rounded-xl flex items-center gap-2 transition-colors uppercase tracking-wider cursor-pointer"
                                     >
                                         <LogOut size={14} />
                                         Log out
-                                    </Link>
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -116,7 +117,7 @@ export default function DashboardPage() {
             {/* MAIN CONTENT AREA */}
             <main className="w-full max-w-7xl mx-auto px-6 md:px-12 pb-20">
 
-                {/* Background Decorations - Repositioned */}
+                {/* Background */}
                 <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-bl from-amber-50/40 via-emerald-50/20 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
                 <div className="absolute top-40 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-sky-50/40 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
 
@@ -133,7 +134,7 @@ export default function DashboardPage() {
                                 {greeting}, <span className="italic text-stone-500">{user?.firstName || user?.username || 'Friend'}</span>.
                             </h1>
                             <p className="text-lg text-stone-500 font-light max-w-2xl leading-relaxed">
-                                Your space to reflect, grow, and find balance with WHIZ, your AI companion.
+                                Your space to reflect and find balance with Whiz, your AI companion.
                             </p>
                         </div>
 
@@ -172,7 +173,7 @@ export default function DashboardPage() {
                                     <Bot size={32} />
                                 </div>
 
-                                <h3 className="text-2xl font-bold text-yellow-700 mb-3">WHIZ Chat</h3>
+                                <h3 className="text-2xl font-bold text-yellow-700 mb-3">Whiz</h3>
                                 <p className="text-base text-stone-500 leading-relaxed mb-8 flex-1">
                                     Talk to your AI companion. Share your thoughts, feelings, and get real-time emotional support.
                                 </p>
@@ -226,7 +227,6 @@ export default function DashboardPage() {
                     </div>
 
                     {/* How It Works Section */}
-                    {/* How It Works Section - Redesigned */}
                     <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-10 border border-stone-100 shadow-xl shadow-stone-200/50 overflow-hidden relative">
                         {/* Decorative background blur */}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-full bg-gradient-to-b from-stone-50/50 to-transparent blur-3xl -z-10" />
@@ -248,7 +248,7 @@ export default function DashboardPage() {
                                         <Bot size={32} className="text-yellow-600" />
                                     </div>
                                 </div>
-                                <h3 className="text-xl font-bold text-stone-900 mb-2">Chat with WHIZ</h3>
+                                <h3 className="text-xl font-bold text-stone-900 mb-2">Chat with Whiz</h3>
                                 <p className="text-sm text-stone-500 leading-relaxed max-w-[250px] mx-auto">
                                     Share your thoughts and feelings in real-time, supportive conversations.
                                 </p>
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                                 </div>
                                 <h3 className="text-xl font-bold text-stone-900 mb-2">Review Reflections</h3>
                                 <p className="text-sm text-stone-500 leading-relaxed max-w-[250px] mx-auto">
-                                    WHIZ automatically generates journal entries for you to review and save.
+                                    Whiz automatically generates journal entries for you to review and save.
                                 </p>
                             </div>
 

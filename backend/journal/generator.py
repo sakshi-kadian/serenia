@@ -72,6 +72,9 @@ class ReflectionGenerator:
             user_prompt=user_prompt
         )
         
+        # Remove markdown formatting (frontend doesn't render it)
+        reflection_text = reflection_text.replace('**', '').replace('##', '').replace('#', '')
+        
         # Get emotion tags
         emotion_tags = self._get_emotion_tags(messages)
         
@@ -134,7 +137,8 @@ class ReflectionGenerator:
             "work": ["work", "job", "career", "boss", "colleague", "office", "project"],
             "relationships": ["relationship", "partner", "friend", "family", "love", "dating"],
             "health": ["health", "sick", "doctor", "pain", "tired", "sleep"],
-            "anxiety": ["anxious", "worry", "stress", "nervous", "panic"],
+            "stress": ["stress", "stressed", "stressful", "overwhelming", "overwhelmed"],
+            "anxiety": ["anxious", "worry", "nervous", "panic"],
             "depression": ["sad", "depressed", "hopeless", "empty", "lonely"],
             "self-improvement": ["goal", "improve", "better", "change", "grow"],
             "daily_life": ["day", "today", "morning", "evening", "routine"]
@@ -241,20 +245,34 @@ class ReflectionGenerator:
         # Build reflection
         reflection_parts = []
         
-        # Opening
-        date_str = datetime.now().strftime("%B %d, %Y")
-        reflection_parts.append(f"# Reflection for {date_str}\n")
+        # Get actual conversation summary
+        first_message = messages[0].content if messages else ""
+        last_message = messages[-1].content if len(messages) > 1 else ""
         
-        # Summary
-        if topics:
-            topic_str = " and ".join([t.replace("_", " ") for t in topics])
+        # Emotional journey
+        first_emotion = messages[0].emotion if messages and messages[0].emotion else "neutral"
+        last_emotion = messages[-1].emotion if len(messages) > 1 and messages[-1].emotion else first_emotion
+        
+        # Create personalized summary
+        if len(messages) == 1:
             reflection_parts.append(
-                f"Today, I spent time reflecting on {topic_str}. "
+                f"Today, you shared: \"{first_message[:150]}{'...' if len(first_message) > 150 else ''}\"\n\n"
+                f"Your primary emotion was **{first_emotion}**. "
             )
+        else:
+            reflection_parts.append(
+                f"You started by saying: \"{first_message[:100]}{'...' if len(first_message) > 100 else ''}\"\n\n"
+                f"Your emotional state began as **{first_emotion}**"
+            )
+            
+            if first_emotion != last_emotion:
+                reflection_parts.append(f" and shifted to **{last_emotion}** by the end of our conversation. ")
+            else:
+                reflection_parts.append(f" and remained consistent throughout. ")
         
-        # Key moments
+        # Key moments with actual quotes
         if key_moments:
-            reflection_parts.append("\n## Key Moments\n")
+            reflection_parts.append("\n\n## Key Moments\n\n")
             for i, moment in enumerate(key_moments, 1):
                 emotion_emoji = self._get_emotion_emoji(moment["emotion"])
                 reflection_parts.append(
@@ -264,13 +282,18 @@ class ReflectionGenerator:
         
         # Insights
         if insights:
-            reflection_parts.append("\n## Insights\n")
+            reflection_parts.append("\n## Insights\n\n")
             for insight in insights:
                 reflection_parts.append(f"- {insight}\n")
         
+        # Topics discussed (if any)
+        if topics and topics != ["general_wellbeing"]:
+            topic_str = ", ".join([t.replace("_", " ") for t in topics])
+            reflection_parts.append(f"\n**Topics explored:** {topic_str}\n")
+        
         # Closing
         reflection_parts.append(
-            "\n## Moving Forward\n"
+            "\n## Moving Forward\n\n"
             "Remember that every conversation is a step toward better understanding yourself. "
             "Your willingness to explore your emotions shows strength and self-awareness."
         )

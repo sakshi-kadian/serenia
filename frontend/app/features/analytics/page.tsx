@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, Brain, Lightbulb, AlertTriangle, Heart, Smile, Frown, Meh, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, TrendingUp, BarChart3, Brain, Lightbulb, AlertTriangle, Heart, Smile, Frown, Meh, Sparkles, CheckCircle2, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { getMoodTrends, getAnxietyPatterns, getInsights } from '@/utils/api';
@@ -9,7 +9,7 @@ export default function InsightsPage() {
     const { user } = useUser();
     const { getToken } = useAuth();
 
-    const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('week');
+    const [timeRange, setTimeRange] = useState<'week' | 'month'>('week'); // Removed 'year' as daily breakdown isn't as useful without chart
     const [loading, setLoading] = useState(true);
     const [moodData, setMoodData] = useState<any>(null);
     const [anxietyData, setAnxietyData] = useState<any>(null);
@@ -26,11 +26,10 @@ export default function InsightsPage() {
         try {
             setLoading(true);
             const token = await getToken();
-            // Pass timeRange directly as period ('week', 'month', 'year') matches backend expectations
-            const period = timeRange === 'week' ? 'weekly' : 'monthly'; // For insights endpoint
+            const period = timeRange === 'week' ? 'weekly' : 'monthly';
 
             const [mood, anxiety, insights] = await Promise.all([
-                getMoodTrends(user!.id, timeRange, token), // Pass 'week', 'month', 'year'
+                getMoodTrends(user!.id, timeRange, token),
                 getAnxietyPatterns(user!.id, 30, token),
                 getInsights(user!.id, period, token)
             ]);
@@ -45,7 +44,6 @@ export default function InsightsPage() {
         }
     };
 
-    // Show loading state
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center p-8">
@@ -63,7 +61,6 @@ export default function InsightsPage() {
         );
     }
 
-    // Show empty state if no data
     if (!moodData || moodData.message_count === 0) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">
@@ -87,88 +84,73 @@ export default function InsightsPage() {
         );
     }
 
-    // Transform backend data for charts with appropriate labels
-    let moodTrend = [];
+    // Process Data
+    const getEmotionConfig = (emotion: string) => {
+        const e = emotion.toLowerCase();
 
-    if (timeRange === 'year' && moodData.daily_moods) {
-        // Aggregate 365 days into 12 months
-        const monthlyData: { [key: string]: { score: number, count: number, emotions: any[] } } = {};
-        const monthOrder: string[] = [];
+        // Positive - Yellow
+        if (['joy', 'excitement', 'optimism', 'happy', 'love', 'gratitude'].includes(e))
+            return { icon: Smile, color: 'bg-yellow-400' };
 
-        moodData.daily_moods.forEach((day: any) => {
-            const date = new Date(day.date);
-            const monthLabel = date.toLocaleDateString('en-US', { month: 'short' }); // "Jan", "Feb"
+        // Sadness - Sky Blue
+        if (['sadness', 'grief', 'loneliness', 'remorse'].includes(e))
+            return { icon: Frown, color: 'bg-sky-400' };
 
-            if (!monthlyData[monthLabel]) {
-                monthlyData[monthLabel] = { score: 0, count: 0, emotions: [] };
-                monthOrder.push(monthLabel);
-            }
+        // Anger - Red
+        if (['anger', 'annoyance', 'disapproval', 'disgust', 'hate'].includes(e))
+            return { icon: AlertTriangle, color: 'bg-rose-500' };
 
-            monthlyData[monthLabel].score += day.mood_score;
-            monthlyData[monthLabel].count += 1;
-            monthlyData[monthLabel].emotions.push(day.dominant_emotion);
-        });
+        // Fear/Anxiety - Orange
+        if (['fear', 'nervousness', 'anxiety', 'worried', 'panic'].includes(e))
+            return { icon: AlertTriangle, color: 'bg-orange-400' };
 
-        // Ensure we respect date order (though the map iteration usually does, explicitly using the order of appearance)
-        moodTrend = monthOrder.map(month => {
-            const data = monthlyData[month];
-            const avgScore = data.score / data.count;
-            // Find most frequent emotion for the month
-            const emotionCounts = data.emotions.reduce((acc: any, curr: any) => {
-                acc[curr] = (acc[curr] || 0) + 1;
-                return acc;
-            }, {});
-            const topEmotion = Object.keys(emotionCounts).reduce((a, b) => emotionCounts[a] > emotionCounts[b] ? a : b);
+        // Confusion - Purple 
+        if (['confusion', 'uncertainty', 'doubt'].includes(e))
+            return { icon: HelpCircle, color: 'bg-violet-400' };
 
-            return {
-                day: month, // Label is "Jan", "Feb"
-                score: avgScore,
-                label: topEmotion,
-                fullDate: month
-            };
-        });
-    } else {
-        // Week and Month views (Daily bars)
-        moodTrend = moodData.daily_moods?.map((day: any) => {
-            const date = new Date(day.date);
-            let label = '';
+        // Disappointment - Indigo
+        if (['disappointment', 'embarrassment'].includes(e))
+            return { icon: Frown, color: 'bg-indigo-400' };
 
-            if (timeRange === 'week') {
-                // Show day names (Mon, Tue...)
-                label = date.toLocaleDateString('en-US', { weekday: 'short' });
-            } else if (timeRange === 'month') {
-                // Show just the date number (1, 2, 3...) to keep it clean
-                label = date.getDate().toString();
-            }
+        // Caring/Admiration - Pale rose
+        if (['caring', 'admiration', 'pride', 'relief'].includes(e))
+            return { icon: Heart, color: 'bg-rose-400' };
 
-            return {
-                day: label,
-                score: day.mood_score,
-                label: day.dominant_emotion,
-                fullDate: day.date
-            };
-        }) || [];
-    }
+        // Neutral - Grey
+        if (['neutral', 'calm', 'realization', 'indifference', 'curiosity'].includes(e))
+            return { icon: Meh, color: 'bg-stone-400' };
 
-    const emotionalBreakdown = moodData.dominant_emotions?.slice(0, 4).map((item: any, idx: number) => {
-        const colors = ['bg-amber-400', 'bg-sky-400', 'bg-rose-400', 'bg-stone-400'];
-        const icons = [Smile, Heart, Frown, Meh];
+        // Default
+        return { icon: Sparkles, color: 'bg-sky-400' };
+    };
+
+    const emotionalBreakdown = moodData.dominant_emotions?.slice(0, 5).map((item: any) => {
         const total = moodData.dominant_emotions.reduce((sum: number, e: any) => sum + e.count, 0);
+        const config = getEmotionConfig(item.emotion);
+
         return {
             emotion: item.emotion,
             percentage: Math.round((item.count / total) * 100),
-            color: colors[idx] || 'bg-gray-400',
-            icon: icons[idx] || Meh
+            color: config.color,
+            icon: config.icon
         };
     }) || [];
 
-    const aiInsights = insightsData?.insights?.map((insight: string, idx: number) => ({
-        id: idx + 1,
-        type: idx === 0 ? 'positive' : idx === 1 ? 'trigger' : 'recommendation',
-        title: insight.split('.')[0],
-        description: insight,
-        icon: idx === 0 ? TrendingUp : idx === 1 ? AlertTriangle : Lightbulb,
-        color: idx === 0 ? 'emerald' : idx === 1 ? 'rose' : 'purple'
+    const aiInsights = insightsData?.insights?.map((insight: string, idx: number) => {
+        const titles = ["Mood Trend", "Emotional Pattern", "Anxiety Analysis", "Progress Update"];
+        return {
+            id: idx,
+            title: titles[idx] || "Insight",
+            description: insight,
+            icon: Brain,
+            color: idx === 0 ? 'purple' : idx === 1 ? 'sky' : idx === 2 ? 'amber' : 'emerald'
+        };
+    }) || [];
+
+    const recommendations = insightsData?.recommendations?.map((rec: string, idx: number) => ({
+        id: idx,
+        text: rec,
+        icon: Lightbulb
     })) || [];
 
     const anxietyTriggers = anxietyData?.triggers?.map((item: any) => ({
@@ -177,11 +159,9 @@ export default function InsightsPage() {
         severity: item.count > 5 ? 'high' : item.count > 2 ? 'medium' : 'low'
     })) || [];
 
-    const maxScore = Math.max(...moodTrend.map((d: any) => d.score));
-
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-[#2C2A26] font-sans relative flex flex-col">
-            {/* Abstract Background */}
+            {/* Background */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-sky-50/40 via-blue-50/20 to-transparent rounded-full blur-3xl" />
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-sky-100/30 to-transparent rounded-full blur-3xl" />
@@ -201,148 +181,130 @@ export default function InsightsPage() {
                         <p className="text-xs text-stone-500">Your emotional patterns</p>
                     </div>
                 </div>
-                <div className="ml-auto flex gap-2">
-                    {(['week', 'month', 'year'] as const).map((range) => (
-                        <button
-                            key={range}
-                            onClick={() => setTimeRange(range)}
-                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${timeRange === range
-                                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md'
-                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
-                                }`}
-                        >
-                            {range.charAt(0).toUpperCase() + range.slice(1)}
-                        </button>
-                    ))}
-                </div>
             </header>
 
             {/* Main Content */}
             <main className="flex-1 relative z-10 p-6 overflow-y-auto">
                 <div className="max-w-7xl mx-auto space-y-6">
 
-                    {/* Top Row: Mood Trend + Stats */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                        {/* Mood Trend Chart */}
-                        <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm border border-sky-100/50 rounded-2xl p-6 shadow-lg">
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h3 className="text-lg font-bold text-stone-900">Mood Trend</h3>
-                                    <p className="text-sm text-stone-500">
-                                        {timeRange === 'week' ? 'Last 7 days' : timeRange === 'month' ? 'Last 30 days' : 'Last 12 months'}
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-sm font-bold">
-                                    <TrendingUp size={16} />
-                                    +15% Better
-                                </div>
-                            </div>
-
-                            {/* Chart */}
-                            <div className="h-64 flex items-end justify-between gap-3">
-                                {moodTrend.map((data: any, i: number) => (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                                        <div className="w-full relative group">
-                                            <div
-                                                className="w-full bg-gradient-to-t from-sky-400 to-sky-300 rounded-t-xl hover:from-sky-500 hover:to-sky-400 transition-all cursor-pointer"
-                                                style={{ height: `${(data.score / maxScore) * 240}px` }}
-                                            >
-                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                                    {data.label} ({data.score}%)
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <span className="text-xs font-semibold text-stone-600">{data.day}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    {/* Row 1: Emotional Breakdown & Anxiety (Replaces Mood Trend) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                         {/* Emotional Breakdown */}
-                        <div className="bg-white/80 backdrop-blur-sm border border-sky-100/50 rounded-2xl p-6 shadow-lg">
-                            <h3 className="text-lg font-bold text-stone-900 mb-4">Emotional Breakdown</h3>
-                            <div className="space-y-4">
-                                {emotionalBreakdown.map((item: any, idx: number) => {
+                        <div className="bg-white/80 backdrop-blur-sm border border-sky-100/50 rounded-2xl p-6 shadow-lg flex flex-col">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-stone-900">Emotional Breakdown</h3>
+                                    <p className="text-sm text-stone-500">How you've been feeling lately</p>
+                                </div>
+                                <div className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1">
+                                    <Sparkles size={14} />
+                                    Top: <span className="capitalize">{moodData.dominant_emotions?.[0]?.emotion || 'Neutral'}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-5 flex-1 overflow-y-auto pr-2">
+                                {emotionalBreakdown.length > 0 ? emotionalBreakdown.map((item: any, idx: number) => {
                                     const Icon = item.icon;
                                     return (
-                                        <div key={idx}>
+                                        <div key={idx} className="group">
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Icon size={18} className="text-stone-600" />
-                                                    <span className="text-sm font-semibold text-stone-700">{item.emotion}</span>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-1.5 rounded-lg ${item.color.replace('bg-', 'bg-opacity-20 text-').replace('400', '700')} bg-opacity-20`}>
+                                                        <Icon size={16} />
+                                                    </div>
+                                                    <span className="text-sm font-semibold text-stone-700 capitalize">{item.emotion}</span>
                                                 </div>
                                                 <span className="text-sm font-bold text-stone-900">{item.percentage}%</span>
                                             </div>
-                                            <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+                                            <div className="w-full h-2.5 bg-stone-100 rounded-full overflow-hidden">
                                                 <div
-                                                    className={`h-full ${item.color} rounded-full transition-all`}
+                                                    className={`h-full ${item.color} rounded-full transition-all duration-1000 ease-out group-hover:brightness-95`}
                                                     style={{ width: `${item.percentage}%` }}
                                                 />
                                             </div>
                                         </div>
                                     );
-                                })}
+                                }) : (
+                                    <div className="flex flex-col items-center justify-center h-48 text-stone-400">
+                                        <Meh size={48} className="mb-2 opacity-20" />
+                                        <p>No enough data yet</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Anxiety Triggers */}
+                        <div className="bg-white/80 backdrop-blur-sm border border-sky-100/50 rounded-2xl p-6 shadow-lg flex flex-col">
+                            <div className="flex items-center gap-2 mb-6">
+                                <AlertTriangle size={20} className="text-rose-500" />
+                                <div>
+                                    <h3 className="text-lg font-bold text-stone-900">Anxiety Triggers</h3>
+                                    <p className="text-sm text-stone-500">Identified stress patterns</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 flex-1 overflow-y-auto pr-2">
+                                {anxietyTriggers.length > 0 ? anxietyTriggers.map((trigger: any, idx: number) => (
+                                    <div key={idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-rose-50/80 to-white border border-rose-100/50 rounded-xl hover:shadow-md transition-all group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-rose-500 font-bold shadow-sm border border-rose-100 text-sm group-hover:scale-110 transition-transform">
+                                                {trigger.frequency}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-stone-800 text-sm">{trigger.trigger}</h4>
+                                                <p className="text-[10px] text-rose-400 font-semibold uppercase tracking-wider">{trigger.severity} IMPACT</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="flex flex-col items-center justify-center flex-1 min-h-64 text-stone-400 bg-stone-50/50 rounded-xl border border-dashed border-stone-200">
+                                        <CheckCircle2 size={32} className="mb-2 text-emerald-400" />
+                                        <p className="text-sm">No anxiety triggers detected!</p>
+                                        <p className="text-xs">Great job maintaining balance.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* AI-Generated Insights */}
-                    <div className="bg-white/80 backdrop-blur-sm border border-sky-100/50 rounded-2xl p-6 shadow-lg">
-                        <div className="flex items-center gap-2 mb-5">
-                            <Brain size={20} className="text-sky-600" />
-                            <h3 className="text-lg font-bold text-stone-900">AI-Generated Insights</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {aiInsights.map((insight: any) => {
-                                const Icon = insight.icon;
-                                const colorMap = {
-                                    emerald: 'from-emerald-500 to-emerald-600',
-                                    rose: 'from-rose-500 to-rose-600',
-                                    purple: 'from-purple-500 to-purple-600',
-                                    sky: 'from-sky-500 to-sky-600'
-                                };
-                                return (
-                                    <div key={insight.id} className="bg-gradient-to-br from-sky-50/50 to-white border border-sky-100 rounded-xl p-5 hover:shadow-md transition-all">
-                                        <div className={`w-10 h-10 bg-gradient-to-br ${colorMap[insight.color as keyof typeof colorMap]} rounded-lg flex items-center justify-center text-white mb-3 shadow-md`}>
-                                            <Icon size={20} />
-                                        </div>
-                                        <h4 className="font-bold text-stone-900 mb-2">{insight.title}</h4>
-                                        <p className="text-sm text-stone-600 leading-relaxed">{insight.description}</p>
+                    {/* Row 2: AI Insights (First 3 in a row) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {aiInsights.slice(0, 3).map((insight: any) => (
+                            <div key={insight.id} className="bg-white/90 backdrop-blur border border-sky-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className={`p-2 rounded-lg bg-${insight.color}-100 text-${insight.color}-600`}>
+                                        <insight.icon size={18} />
                                     </div>
-                                );
-                            })}
-                        </div>
+                                    <h4 className="font-bold text-stone-800">{insight.title}</h4>
+                                </div>
+                                <p className="text-sm text-stone-600 leading-relaxed">{insight.description}</p>
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Anxiety Triggers */}
-                    <div className="bg-white/80 backdrop-blur-sm border border-sky-100/50 rounded-2xl p-6 shadow-lg">
-                        <div className="flex items-center gap-2 mb-5">
-                            <AlertTriangle size={20} className="text-rose-600" />
-                            <h3 className="text-lg font-bold text-stone-900">Anxiety Triggers</h3>
-                        </div>
-                        <div className="space-y-3">
-                            {anxietyTriggers.map((trigger: any, idx: number) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-rose-50/50 to-orange-50/30 border border-rose-100 rounded-xl hover:shadow-sm transition-all">
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center text-rose-600 font-bold">
-                                            {trigger.frequency}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-stone-900">{trigger.trigger}</h4>
-                                            <p className="text-xs text-stone-500">Occurred {trigger.frequency} times this week</p>
-                                        </div>
+                    {/* Row 3: Suggestions (Full Width, Horizontal) */}
+                    {recommendations.length > 0 && (
+                        <div className="bg-gradient-to-r from-emerald-50/50 via-white to-emerald-50/30 border border-emerald-100/50 rounded-2xl p-6 shadow-lg">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Lightbulb size={20} className="text-emerald-600" />
+                                <h3 className="text-lg font-bold text-stone-900">Suggestions</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {recommendations.map((rec: any) => (
+                                    <div key={rec.id} className="flex gap-3 text-sm text-stone-700 bg-white/80 p-4 rounded-xl border border-emerald-100/50 shadow-sm hover:shadow-md transition-all">
+                                        <div className="mt-0.5 min-w-[4px] h-4 rounded-full bg-emerald-400" />
+                                        <p>{rec.text}</p>
                                     </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${trigger.severity === 'high'
-                                        ? 'bg-rose-100 text-rose-700'
-                                        : 'bg-amber-100 text-amber-700'
-                                        }`}>
-                                        {trigger.severity.toUpperCase()}
-                                    </span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+                            <div className="mt-6 pt-4 border-t border-emerald-100/50 text-center">
+                                <Link href="/features/chat" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-wide">
+                                    Start a new session →
+                                </Link>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                 </div>
             </main>

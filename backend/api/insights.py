@@ -210,33 +210,74 @@ async def get_progress(
         Progress indicators
     """
     try:
-        # Get analytics engine
-        engine = get_analytics_engine()
+        from datetime import datetime, timedelta
         
-        # Compare current week to previous week
-        current_week = engine.calculate_mood_trends(user_id, db, period="week")
-        previous_week = engine.calculate_mood_trends(user_id, db, period="week") # Still using 7 day logic internally for this one? Actually previous week logic is tricky now. 
+        # Calculate date ranges for current and previous week
+        now = datetime.utcnow()
         
-        # Calculate progress
-        current_score = current_week.get("average_score", 0)
+        # Current week (last 7 days)
+        current_end = now
+        current_start = now - timedelta(days=6)  # 6 days ago + today = 7 days
         
-        # Get previous week score (days 8-14)
-        if previous_week["daily_moods"]:
-            prev_moods = previous_week["daily_moods"][:7]  # First 7 days of 14-day period
-            prev_score = sum(d["mood_score"] for d in prev_moods) / len(prev_moods) if prev_moods else 0
-        else:
-            prev_score = 0
+        # Previous week (days 7-13 ago)
+        previous_end = current_start - timedelta(seconds=1)  # End of previous week
+        previous_start = previous_end - timedelta(days=6)  # 7 days before that
+        
+        # Get messages for current week
+        current_messages = db.query(Message).join(Conversation).filter(
+            Conversation.user_id == user_id,
+            Message.role == "user",
+            Message.timestamp >= current_start,
+            Message.timestamp <= current_end,
+            Message.emotion.isnot(None)
+        ).all()
+        
+        # Get messages for previous week
+        previous_messages = db.query(Message).join(Conversation).filter(
+            Conversation.user_id == user_id,
+            Message.role == "user",
+            Message.timestamp >= previous_start,
+            Message.timestamp <= previous_end,
+            Message.emotion.isnot(None)
+        ).all()
+        
+        # Calculate average mood scores
+        def calculate_avg_mood(messages):
+            if not messages:
+                return 0
+            # Map emotions to scores (simplified)
+            emotion_scores = {
+                "joy": 1.0, "love": 0.9, "gratitude": 0.8, "optimism": 0.7,
+                "admiration": 0.6, "approval": 0.5, "caring": 0.5, "excitement": 0.7,
+                "amusement": 0.6, "pride": 0.7, "relief": 0.6, "desire": 0.5,
+                "neutral": 0.0, "realization": 0.0, "surprise": 0.0, "curiosity": 0.0,
+                "confusion": -0.3, "nervousness": -0.4, "disappointment": -0.5,
+                "sadness": -0.7, "grief": -0.8, "remorse": -0.6, "embarrassment": -0.5,
+                "fear": -0.7, "disgust": -0.6, "anger": -0.8, "annoyance": -0.5,
+                "disapproval": -0.4
+            }
+            scores = [emotion_scores.get(msg.emotion, 0) for msg in messages]
+            return sum(scores) / len(scores) if scores else 0
+        
+        current_score = calculate_avg_mood(current_messages)
+        previous_score = calculate_avg_mood(previous_messages)
         
         # Calculate improvement
-        improvement = current_score - prev_score
+        improvement = current_score - previous_score
+        
+        # Calculate percentage change
+        if previous_score != 0:
+            percentage_change = (improvement / abs(previous_score)) * 100
+        else:
+            percentage_change = 0 if current_score == 0 else 100
         
         # Determine progress status
         if improvement > 0.2:
             status = "improving"
-            message = "Your mood has improved significantly this week!"
+            message = f"Your mood has improved this week! (+{abs(percentage_change):.1f}%)"
         elif improvement < -0.2:
             status = "declining"
-            message = "Your mood has declined this week. Consider reaching out for support."
+            message = f"Your mood has declined this week. Consider reaching out for support. ({percentage_change:.1f}%)"
         else:
             status = "stable"
             message = "Your mood has been relatively stable this week."
@@ -246,15 +287,19 @@ async def get_progress(
             "status": status,
             "message": message,
             "current_week": {
-                "sentiment": current_week["average_sentiment"],
                 "score": current_score,
-                "trend": current_week["trend"]
+                "message_count": len(current_messages),
+                "start_date": current_start.isoformat(),
+                "end_date": current_end.isoformat()
             },
             "previous_week": {
-                "score": prev_score
+                "score": previous_score,
+                "message_count": len(previous_messages),
+                "start_date": previous_start.isoformat(),
+                "end_date": previous_end.isoformat()
             },
             "improvement": round(improvement, 2),
-            "improvement_percentage": round(improvement * 100, 1)
+            "improvement_percentage": round(percentage_change, 1)
         }
         
     except Exception as e:

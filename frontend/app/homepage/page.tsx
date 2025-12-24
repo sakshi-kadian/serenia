@@ -20,7 +20,13 @@ export default function Homepage() {
 
     return (
         // Base Background
-        <div className="min-h-screen bg-[#FDFBF7] text-[#4A4741] font-sans overflow-x-hidden">
+        <div className="min-h-screen bg-[#FDFBF7] text-[#4A4741] font-sans overflow-x-hidden relative">
+
+            {/* Global Hero Background Glow (Firework/Blob) */}
+            <div className="absolute top-0 left-0 w-full h-[120vh] overflow-hidden pointer-events-none z-0">
+                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1400px] h-[1400px] bg-gradient-to-b from-amber-100/60 via-yellow-50/30 to-transparent rounded-full blur-[120px] opacity-100" />
+                <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-amber-200/30 to-transparent rounded-full blur-[100px] animate-pulse duration-[3000ms]" />
+            </div>
 
             {/* HEADER */}
             <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-[#FDFBF7]/80 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'}`}>
@@ -67,6 +73,7 @@ export default function Homepage() {
 
                 {/* HERO SECTION */}
                 <section id="home" className="relative px-6 lg:px-8 mb-40 scroll-mt-32">
+
                     <div className="relative z-10 max-w-5xl mx-auto text-center flex flex-col items-center">
 
                         <motion.h1

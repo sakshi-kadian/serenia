@@ -34,7 +34,12 @@ function adaptReflection(r: Reflection): UIReflection {
         type: r.user_approved ? 'approved' : 'ai-draft',
         title: `Reflection from ${createdDate.toLocaleDateString()}`,
         date: createdDate.toISOString().split('T')[0],
-        time: createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        time: createdDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'UTC',
+            timeZoneName: 'short'
+        }),
         aiSummary: r.ai_generated_text,
         content: r.final_text,
         emotionalPatterns: r.emotions_detected || [],

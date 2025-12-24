@@ -139,7 +139,7 @@ class AnalyticsEngine:
         trend = self._detect_trend(daily_moods)
         
         return {
-            "period_days": days,
+            "period_days": period_days,
             "message_count": len(messages),
             "daily_moods": daily_moods,
             "dominant_emotions": dominant_emotions,
@@ -258,43 +258,44 @@ class AnalyticsEngine:
             
             if trend == "improving":
                 insights.append(
-                    f"Your mood has been {trend} over the past {days} days. Keep up the positive momentum!"
+                    f"Great news! Your mood trends show an improvement over the past {days} days."
                 )
             elif trend == "declining":
                 insights.append(
-                    f"Your mood has been {trend} recently. It's okay to have difficult periods. Consider reaching out for support."
+                    f"We've noticed a decline in your mood recently. Remember, ups and downs are a natural part of the journey."
                 )
                 recommendations.append("Practice self-care activities that bring you joy")
             else:
                 insights.append(
-                    f"Your mood has been relatively {trend} over the past {days} days."
+                    f" Your mood has remained relatively stable over the past {days} days."
                 )
         
         # Insight 2: Dominant emotions
         if mood_data["dominant_emotions"]:
             top_emotion = mood_data["dominant_emotions"][0]["emotion"]
             insights.append(
-                f"Your most frequent emotion has been {top_emotion}. Recognizing your emotional patterns is an important step."
+                f"Your dominant emotion recently has been {top_emotion}. " + 
+                ("It's great to embrace this feeling." if top_emotion in ["joy", "love", "optimism"] else "Acknowledging this is the first step to processing it.")
             )
         
         # Insight 3: Anxiety patterns
         if anxiety_data["anxiety_detected"]:
             episodes = anxiety_data["anxiety_episodes"]
             insights.append(
-                f"You experienced anxiety {episodes} time(s) in the past {days} days. Remember that anxiety is manageable with the right tools."
+                f"We identified {episodes} moments of anxiety in your recent conversations. Awareness is key to management."
             )
             recommendations.append("Try deep breathing exercises when feeling anxious")
             
             if anxiety_data["triggers"]:
                 top_trigger = anxiety_data["triggers"][0]["trigger"]
                 insights.append(
-                    f"Common theme in your anxiety: {top_trigger}. Identifying triggers helps you prepare coping strategies."
+                    f"It seems '{top_trigger}' comes up often when you feel anxious. Identifying triggers helps you prepare."
                 )
         
         # Insight 4: Progress indicators
         if mood_data["trend"] == "improving" and not anxiety_data["anxiety_detected"]:
             insights.append(
-                "You're making great progress! Your mood is improving and anxiety levels are low."
+                "You're thriving! Your mood is on the rise and anxiety markers are absent."
             )
         
         # Default recommendations

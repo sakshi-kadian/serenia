@@ -1,6 +1,7 @@
 """
 Gemini AI Integration for Whiz Chat
 Provides empathetic, context-aware responses using Google's Gemini API
+OPTIMIZED FOR SPEED - NO MARKDOWN FORMATTING
 """
 
 import os
@@ -38,10 +39,17 @@ Your Personality:
 - Patient and non-judgmental
 
 Your Approach:
-1. Listen Actively: Response to specific details
-2. Respond Naturally: No templates
+1. Listen Actively: Respond to specific details
+2. Respond Naturally: No templates or robotic language
 3. Show Empathy: Validate feelings authentically
 4. Maintain Boundaries: You are a friend, not a therapist
+
+CRITICAL FORMATTING RULES:
+- DO NOT use asterisks (*) or double asterisks (**) for emphasis
+- DO NOT use bullet points with asterisks
+- Use plain text only - write like you're texting a friend
+- Use simple dashes (-) for lists if absolutely needed
+- Write naturally and conversationally
 
 Crisis Protocol:
 If you detect severe distress or suicidal ideation, respond with immediate concern and encourage professional help (988).
@@ -58,7 +66,7 @@ If you detect severe distress or suicidal ideation, respond with immediate conce
         conversation_history: List[Dict] = None
     ) -> str:
         """
-        Generate empathetic response using OpenAI
+        Generate empathetic response using Gemini (OPTIMIZED)
         
         Args:
             user_message: User's message
@@ -71,94 +79,115 @@ If you detect severe distress or suicidal ideation, respond with immediate conce
             AI-generated response
         """
         try:
-            print(f"\n{'='*60}")
-            print(f"WHIZ DEBUG: generate_response called")
-            print(f"User message: {user_message[:100]}...")
-            print(f"Model status: {self.model}")
-            print(f"{'='*60}\n")
-            
             # Build context from analysis
             context = self._build_context(user_message, emotion, anxiety, crisis)
             
             # Generate response
             if not self.model:
-                print("CRITICAL: Gemini model is None - using fallback")
                 return self._fallback_response(emotion, anxiety, crisis)
             
             try:
-                print("Gemini model exists - calling API...")
-                
                 # Construct the prompt
                 full_prompt = f"""{self.system_prompt}
 
-Context about current message:
-{context}
+Context: {context}
 
-Conversation History:
-{self._format_history(conversation_history)}
+History: {self._format_history(conversation_history)}
 
 User: {user_message}
 
-Whiz:"""
+Whiz (respond in plain text, no asterisks or markdown):"""
 
-                # Call standard Gemini API
-                response = self.model.generate_content(full_prompt)
+                # Call Gemini API with FAST settings
+                response = self.model.generate_content(
+                    full_prompt,
+                    generation_config={
+                        'temperature': 0.8,
+                        'max_output_tokens': 150,  # Shorter = faster
+                        'top_p': 0.95,
+                        'top_k': 40
+                    }
+                )
                 
-                # Extract text safely
+                # Extract text safely and remove any markdown
                 if response and response.text:
-                    ai_response = response.text.strip()
-                    print(f"Got response from Gemini: {ai_response[:100]}...")
-                    return ai_response
+                    text = response.text.strip()
+                    # Remove common markdown formatting
+                    text = text.replace('**', '').replace('*', '')
+                    return text
                 else:
-                    print("Empty response from Gemini")
                     return self._fallback_response(emotion, anxiety, crisis)
                 
             except Exception as api_error:
-                print(f"Gemini API error: {str(api_error)}")
+                print(f"Gemini error: {str(api_error)}")
                 return self._fallback_response(emotion, anxiety, crisis)
                 
         except Exception as e:
-            print(f"Whiz error: {str(e)}")
+            print(f"Error generating response: {str(e)}")
             return self._fallback_response(emotion, anxiety, crisis)
-
-    def _format_history(self, history):
-        if not history: return ""
-        formatted = ""
-        for msg in history[-5:]:
-            role = "User" if msg["role"] == "user" else "Whiz"
-            formatted += f"{role}: {msg['content']}\n"
-        return formatted
     
     def _build_context(self, message: str, emotion: Dict, anxiety: Dict, crisis: Dict) -> str:
         """Build context string from analysis results"""
         context_parts = []
         
-        # Emotion context
-        if emotion and "primary_emotion" in emotion:
-            context_parts.append(f"Detected emotion: {emotion['primary_emotion']}")
+        if emotion and emotion.get("emotion"):
+            context_parts.append(f"Emotion: {emotion['emotion']}")
         
-        # Anxiety context
         if anxiety and anxiety.get("anxiety_detected"):
-            severity = anxiety.get("severity", "unknown")
-            context_parts.append(f"Anxiety level: {severity}")
+            context_parts.append(f"Anxiety: {anxiety.get('severity', 'detected')}")
         
-        # Crisis context
         if crisis and crisis.get("crisis_detected"):
-            context_parts.append("CRISIS INDICATORS DETECTED - Be extra supportive and gentle")
+            context_parts.append("⚠️ CRISIS DETECTED")
         
-        return " | ".join(context_parts) if context_parts else "Normal conversation"
+        return " | ".join(context_parts) if context_parts else "Neutral conversation"
+    
+    def _format_history(self, history: List[Dict]) -> str:
+        """Format conversation history (last 3 messages only for speed)"""
+        if not history:
+            return "First message"
+        
+        # Only use last 3 messages for speed
+        recent = history[-3:] if len(history) > 3 else history
+        formatted = []
+        for msg in recent:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")[:100]  # Truncate for speed
+            formatted.append(f"{role}: {content}")
+        
+        return " | ".join(formatted)
     
     def _fallback_response(self, emotion: Dict, anxiety: Dict, crisis: Dict) -> str:
-        """Fallback response if AI fails"""
+        """Generate fallback response when API fails"""
+        
+        # Crisis response
         if crisis and crisis.get("crisis_detected"):
-            return "I'm really concerned about you. Please reach out to someone who can help - call 988 for immediate support."
-        return "I'm here for you. How are you feeling right now?"
+            return ("I'm really concerned about you. Please reach out to someone who can help - "
+                   "call 988 for immediate support. You don't have to face this alone.")
+        
+        # High anxiety response
+        if anxiety and anxiety.get("severity") in ["severe", "moderate"]:
+            return ("I hear you. It sounds like you're feeling overwhelmed right now. "
+                   "Would it help to take a moment to breathe together?")
+        
+        # Emotion-based responses
+        emotion_name = emotion.get("emotion", "neutral") if emotion else "neutral"
+        
+        responses = {
+            "sadness": "I'm here with you. It's okay to feel sad. Would you like to talk about what's weighing on you?",
+            "anger": "I can sense your frustration. Those feelings are valid. What's been bothering you?",
+            "fear": "It's okay to feel scared. I'm here to listen. What's on your mind?",
+            "joy": "It's wonderful to hear some positivity! What's bringing you joy today?",
+        }
+        
+        return responses.get(emotion_name, 
+                           "I'm here to listen. How are you feeling today?")
 
-# Global instance
+
+# Singleton instance
 _gemini_chat = None
 
 def get_gemini_chat() -> GeminiChat:
-    """Get or create chat instance"""
+    """Get or create Gemini chat singleton"""
     global _gemini_chat
     if _gemini_chat is None:
         _gemini_chat = GeminiChat()
