@@ -25,7 +25,7 @@ httpx
 requests
 
 # Google Gemini API
-google-genai
+google-generativeai
 
 # Utilities
 python-dateutil
